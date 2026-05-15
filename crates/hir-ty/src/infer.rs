@@ -469,6 +469,10 @@ pub enum InferenceDiagnostic {
         found: StoredTy,
     },
     SolverDiagnostic(SolverDiagnostic),
+    MutableRefBinding {
+        #[type_visitable(ignore)]
+        pat: PatId,
+    },
 }
 
 /// Represents coercing a value to a different type of value.
