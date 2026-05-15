@@ -55,10 +55,11 @@
 //!     manually_drop: drop
 //!     matches:
 //!     non_null:
-//!     non_zero:
+//!     non_zero: transmute, option
 //!     option: panic
 //!     ord: eq, option
 //!     panic: fmt
+//!     pat:
 //!     phantom_data:
 //!     pin:
 //!     pointee: copy, send, sync, ord, hash, unpin, phantom_data
@@ -1713,6 +1714,43 @@ pub mod result {
         #[lang = "Err"]
         Err(E),
     }
+    impl<T, E> Result<T, E> {
+        pub const fn or<F>(self, res: Result<T, F>) -> Result<T, F> {
+            match self {
+                Ok(v) => Ok(v),
+                Err(_) => res,
+            }
+        }
+
+        pub const fn unwrap_or(self, default: T) -> T {
+            match self {
+                Ok(t) => t,
+                Err(_) => default,
+            }
+        }
+
+        // region:fn
+        pub const fn or_else<F, O>(self, op: O) -> Result<T, F>
+        where
+            O: FnOnce(E) -> Result<T, F>,
+        {
+            match self {
+                Ok(t) => Ok(t),
+                Err(e) => op(e),
+            }
+        }
+
+        pub const fn unwrap_or_else<F>(self, op: F) -> T
+        where
+            F: FnOnce(E) -> T,
+        {
+            match self {
+                Ok(t) => t,
+                Err(e) => op(e),
+            }
+        }
+        // endregion:fn
+    }
 }
 // endregion:result
 
@@ -2277,6 +2315,33 @@ mod macros {
     }
     // endregion:deref_pat
 }
+
+// region:pat
+pub mod pat {
+    #[macro_export]
+    #[rustc_builtin_macro(pattern_type)]
+    macro_rules! pattern_type {
+        ($($arg:tt)*) => {
+            /* compiler built-in */
+        };
+    }
+
+    pub const trait RangePattern {
+        /// Trait version of the inherent `MIN` assoc const.
+        #[lang = "RangeMin"]
+        const MIN: Self;
+
+        /// Trait version of the inherent `MIN` assoc const.
+        #[lang = "RangeMax"]
+        const MAX: Self;
+
+        /// A compile-time helper to subtract 1 for exclusive ranges.
+        #[lang = "RangeSub"]
+        #[track_caller]
+        fn sub_one(self) -> Self;
+    }
+}
+// endregion:pat
 
 // region:non_zero
 pub mod num {
